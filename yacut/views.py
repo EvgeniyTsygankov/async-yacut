@@ -21,7 +21,6 @@ from .constants import LENGTH_SHORT, MAX_TRIES
 from .forms import FileForm, URLMapForm
 from .models import URLMap
 
-
 # Алфавит для генерации коротких ссылок (латинские буквы + цифры)
 ALPHABET = string.ascii_letters + string.digits
 
