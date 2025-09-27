@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}404 — Страница не найдена — YaCut{% endblock %}
+{% block content %}
+<main>
+  <section class="container my-5 px-4">
+    <div class="text-center">
+      <h1 class="display-4 text-danger">404</h1>
+      <p class="lead mt-3">Страница не найдена</p>
+      <p class="text-muted">
+        Возможно, короткая ссылка устарела, была удалена или вы опечатались в адресе.
+      </p>
+      <div class="mt-4">
+        <a class="btn btn-primary btn-lg" href="{{ url_for('index_view') }}">На главную</a>
+        <a class="btn btn-outline-secondary btn-lg ml-2" href="{{ url_for('files_view') }}">К загрузке файлов</a>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock content %}

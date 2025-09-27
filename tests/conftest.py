@@ -1,12 +1,12 @@
+from io import BytesIO
 import os
-import sys
 from pathlib import Path
 from random import choice
+import sys
 
-import pytest
-from dotenv import load_dotenv
-from io import BytesIO
 from PIL import Image
+from dotenv import load_dotenv
+import pytest
 
 load_dotenv()
 

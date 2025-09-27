@@ -1,8 +1,7 @@
-import re
 from http import HTTPStatus
+import re
 
 import pytest
-
 from tests.conftest import PY_URL, TEST_BASE_URL
 from yacut.models import URLMap
 

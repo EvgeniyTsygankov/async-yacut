@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Главная{% endblock %}
+{% block content %}
+<main>
+  <section class="container my-5 px-4">
+    <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+    <p class="text-center my-4">
+      Создайте короткую ссылку автоматически или предложите свой вариант
+    </p>
+    <div class="container">
+      <div class="row my-3">
+        <div class="col-sm"></div>
+        <div class="col-sm">
+          <form method="post" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+              {{ form.original_link(class="form-control form-control-lg py-2 mb-3",
+                                    placeholder="Длинная ссылка") }}
+              {% for err in form.original_link.errors %}
+                <p><span style="color:red">{{ err }}</span></p>
+              {% endfor %}
+            </div>
+            <div class="form-group">
+              {{ form.custom_id(class="form-control form-control-lg py-2 mb-1",
+                                placeholder="Ваш вариант короткой ссылки") }}
+              {% for err in form.custom_id.errors %}
+                <p><span style="color:red">{{ err }}</span></p>
+              {% endfor %}
+            </div>
+            {{ form.submit(class="btn btn-primary") }}
+          </form>
+          {% if short_link %}
+            <div class="container">
+              <div class="row ">
+                <div class="col-sm">
+                </div>
+                <div class="col-sm">
+                  <p class="text-center">
+                    <h5 class="text-center">Ваша новая ссылка готова:</h5>
+                  </p>
+                  <a href="{{ short_link }}" target="_blank" rel="noopener">{{ short_link }}</a>
+                </div>
+                <div class="col-sm">
+                </div>
+              </div>
+            </div> 
+          {% endif %}
+        </div>
+        <div class="col-sm"></div>
+      </div>
+  </section>
+</main>
+{% endblock content %}

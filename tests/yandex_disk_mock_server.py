@@ -1,11 +1,11 @@
-import aiohttp
-import re
 from contextlib import suppress
 from hashlib import md5
-from urllib.parse import unquote, quote
+import re
+from urllib.parse import quote, unquote
 
-import pytest
+import aiohttp
 from aiohttp import web
+import pytest
 
 REQUEST_UPLOAD_URL = '/v1/disk/resources/upload'
 UPLOAD_URL = '/upload-target'

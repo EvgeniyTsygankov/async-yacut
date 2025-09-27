@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Загрузка файлов{% endblock %}
+{% block content %}
+<main>
+  <section class="container my-5 px-4">
+    <h1 class="text-center"><span style="color:red">Ya</span>Cut</h1>
+    <p class="text-center my-4">
+      Загрузите файлы и пролучите на них короткие ссылки</p>
+    <div class="container">
+      <div class="row my-3">
+        <div class="col-sm"></div>
+        <div class="col-sm">
+          <form method="post" enctype="multipart/form-data" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+              {{ form.files(class="form-control-file") }}
+              {% for err in form.files.errors %}
+                <p>
+                  <span style="color:red">{{ err }}</span>
+                </p>
+              {% endfor %}
+            </div>
+            {{ form.submit(class="btn btn-primary", value="Загрузить")}}
+          </form>
+          {% if results %}
+            <table class="table table-striped mt-3">
+              <tbody>
+                {% for item in results %}
+                  <tr>
+                    <td>{{ item.filename }}</td>
+                    <td>
+                      <a href="{{ item.short_link }}" target="_blank" rel="noopener">
+                        {{ item.short_link }}
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+        </div>
+        <div class="col-sm"></div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock content %}
