@@ -1,8 +1,8 @@
 import asyncio
-import string
 from secrets import choice
+import string
+from urllib.parse import urljoin
 
-import requests
 from flask import (
     Response,
     abort,
@@ -12,14 +12,15 @@ from flask import (
     render_template,
     request,
     stream_with_context,
-    url_for,
+    url_for
 )
+import requests
 
 from . import app, db
+from . import yandex_cloud as yc
 from .constants import LENGTH_SHORT, MAX_TRIES
 from .forms import FileForm, URLMapForm
 from .models import URLMap
-from . import yandex_cloud as yc
 
 
 # Алфавит для генерации коротких ссылок (латинские буквы + цифры)
@@ -174,8 +175,9 @@ def _extract_files_from_request():
 
 
 def _create_short_links(items, token: str):
-    """Создает короткие ссылки для загруженных на Яндекс.Диск файлов."""
+    """Создает короткие абсолютные ссылки для загруженных файлов."""
     results = []
+    base = request.host_url
     for it in items:
         short = get_unique_short_id()
         db.session.add(URLMap(original=it.disk_path, short=short))
@@ -183,16 +185,12 @@ def _create_short_links(items, token: str):
             asyncio.run(yc.get_download_url(token, it.disk_path))
         except Exception:
             pass
-        results.append(
-            {
-                "filename": it.filename,
-                "short_link": url_for(
-                    "follow_short",
-                    short_id=short,
-                    _external=True
-                ),
-            }
-        )
+
+        abs_url = urljoin(base, short)
+        results.append({
+            "filename": it.filename,
+            "short_link": abs_url,
+        })
     db.session.commit()
     return results
 

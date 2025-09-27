@@ -9,7 +9,6 @@ import aiohttp
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-
 # Базовые константы для работы с API Яндекс.Диска
 API_HOST = "https://cloud-api.yandex.net"
 API_VERSION = "v1"
