@@ -15,13 +15,12 @@
             <div class="form-group">
               {{ form.files(class="form-control-file") }}
               {% for err in form.files.errors %}
-                <p>
-                  <span style="color:red">{{ err }}</span>
-                </p>
+                <p><span style="color:red">{{ err }}</span></p>
               {% endfor %}
             </div>
             {{ form.submit(class="btn btn-primary", value="Загрузить")}}
           </form>
+
           {% if results %}
             <table class="table table-striped mt-3">
               <tbody>
@@ -29,9 +28,8 @@
                   <tr>
                     <td>{{ item.filename }}</td>
                     <td>
-                      <a href="{{ item.short_link }}" target="_blank" rel="noopener">
-                        {{ item.short_link }}
-                      </a>
+                      {% set link = url_for('follow_short', short_id=item.short, _external=True) %}
+                      <a href="{{ link }}" target="_blank" rel="noopener">{{ link }}</a>
                     </td>
                   </tr>
                 {% endfor %}

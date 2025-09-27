@@ -1,7 +1,6 @@
 import asyncio
 from secrets import choice
 import string
-from urllib.parse import urljoin
 
 from flask import (
     Response,
@@ -175,9 +174,8 @@ def _extract_files_from_request():
 
 
 def _create_short_links(items, token: str):
-    """Создает короткие абсолютные ссылки для загруженных файлов."""
+    """Создает короткие ссылки для загруженных на Яндекс.Диск файлов."""
     results = []
-    base = request.host_url
     for it in items:
         short = get_unique_short_id()
         db.session.add(URLMap(original=it.disk_path, short=short))
@@ -185,11 +183,9 @@ def _create_short_links(items, token: str):
             asyncio.run(yc.get_download_url(token, it.disk_path))
         except Exception:
             pass
-
-        abs_url = urljoin(base, short)
         results.append({
             "filename": it.filename,
-            "short_link": abs_url,
+            "short": short,
         })
     db.session.commit()
     return results
