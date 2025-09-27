@@ -19,8 +19,10 @@ from . import app, db
 from .constants import LENGTH_SHORT, MAX_TRIES
 from .forms import FileForm, URLMapForm
 from .models import URLMap
-from .yandex_cloud import YandexDiskError, get_download_url, upload_many
+from . import yandex_cloud as yc
 
+
+# Алфавит для генерации коротких ссылок (латинские буквы + цифры)
 ALPHABET = string.ascii_letters + string.digits
 
 
@@ -30,7 +32,7 @@ def _random_short(length: int) -> str:
 
 
 def get_unique_short_id(length: int = LENGTH_SHORT) -> str:
-    """Генерирует уникальный короткий идентификатор."""
+    """Генерирует уникальный короткий идентификатор для ссылки."""
     for _ in range(MAX_TRIES):
         code = _random_short(length)
         if not URLMap.query.filter_by(short=code).first():
@@ -41,9 +43,11 @@ def get_unique_short_id(length: int = LENGTH_SHORT) -> str:
 @app.route("/", methods=["GET", "POST"])
 def index_view():
     """
-    Главная страница - создание коротких ссылок.
+    Главная страница: создание коротких ссылок для URL.
 
-    Обрабатывает форму для создания коротких ссылок из длинных URL.
+    Обрабатывает форму с оригинальной ссылкой и опциональным кастомным ID.
+    При успешной валидации создает запись в базе данных и показывает короткую
+    ссылку.
     """
     form = URLMapForm()
     short_link = None
@@ -51,8 +55,7 @@ def index_view():
         original = form.original_link.data
         custom = form.custom_id.data or None
         short = custom if custom else get_unique_short_id()
-        url_map = URLMap(original=original, short=short)
-        db.session.add(url_map)
+        db.session.add(URLMap(original=original, short=short))
         db.session.commit()
         short_link = request.host_url + short
     return render_template(
@@ -65,37 +68,32 @@ def index_view():
 
 def _filename_from_disk_path(path: str) -> str:
     """
-    Извлекает имя файла из пути на Яндекс.Диске.
+    Извлекает оригинальное имя файла из пути Яндекс.Диска.
 
-    Убирает UUID префикс если он присутствует в формате 'uuid_filename'.
+    Ожидает путь в формате 'app:/.../<uuid>_original_name.ext'
     """
     name = path.rsplit("/", 1)[-1]
     return name.split("_", 1)[1] if "_" in name else name
 
 
 def _proxy_yadisk_download(href: str, original_path: str) -> Response:
-    """Проксирует файл с Яндекс.Диска через сервер."""
+    """Проксирует скачивание файла с Яндекс.Диска через сервер."""
     try:
         upstream = requests.get(href, stream=True, timeout=120)
     except requests.RequestException:
         abort(502)
-
     if upstream.status_code >= 400:
         abort(502)
-
     headers: dict[str, str] = {}
     for h in ("Content-Type", "Content-Length", "Content-Disposition"):
         v = upstream.headers.get(h)
         if v:
             headers[h] = v
-
     if "Content-Disposition" not in headers:
         headers["Content-Disposition"] = (
             f'attachment; filename="{_filename_from_disk_path(original_path)}"'
         )
-
     headers.setdefault("X-Accel-Buffering", "no")
-
     return Response(
         stream_with_context(upstream.iter_content(64 * 1024)),
         headers=headers,
@@ -104,15 +102,13 @@ def _proxy_yadisk_download(href: str, original_path: str) -> Response:
 
 
 def _serve_yadisk_path(original_path: str, token: str) -> Response:
-    """Обрабатывает скачивание файла с Яндекс.Диска."""
+    """Обрабатывает скачивание файла с Яндекс Диска."""
     try:
-        href = asyncio.run(get_download_url(token, original_path))
+        href = asyncio.run(yc.get_download_url(token, original_path))
     except Exception:
         abort(502)
-
     if current_app.config.get("DISK_DIRECT_REDIRECT"):
         return redirect(href, code=302)
-
     return _proxy_yadisk_download(href, original_path)
 
 
@@ -122,26 +118,23 @@ def follow_short(short_id):
     """
     Обработчик перехода по короткой ссылке.
 
-    Перенаправляет на оригинальный URL или скачивает файл с Яндекс.Диска.
+    Для обычных URL - редирект на оригинальный адрес.
+    Для путей Яндекс.Диска - скачивание файла.
     """
     if short_id.lower() == "files":
         return redirect(url_for("files_view"))
-
     url_map = URLMap.query.filter_by(short=short_id).first_or_404()
     original = url_map.original or ""
-
     if original.startswith(("http://", "https://")):
         return redirect(original, code=302)
-
     token = current_app.config.get("DISK_TOKEN") or ""
     if not token:
         abort(500)
-
     return _serve_yadisk_path(original, token)
 
 
 def _render_files_page(form: FileForm, results=None):
-    """Рендерит страницу загрузки файлов с переданными параметрами."""
+    """Утилита для рендеринга страницы загрузки файлов."""
     return render_template(
         "download_files.html",
         form=form,
@@ -151,17 +144,13 @@ def _render_files_page(form: FileForm, results=None):
 
 
 def _flash_and_render(form: FileForm, message: str, category: str):
-    """Показывает flash-сообщение и рендерит страницу."""
+    """Утилита для показа flash-сообщения и рендеринга страницы."""
     flash(message, category)
     return _render_files_page(form)
 
 
 def _extract_files_from_form(form: FileForm):
-    """
-    Извлекает файлы из полей формы.
-
-    Проверяет различные возможные имена полей с файлами.
-    """
+    """Извлекает файлы из формы, поддерживая разные имена полей."""
     files = []
     for field_name in ("files", "file"):
         if hasattr(form, field_name):
@@ -176,11 +165,7 @@ def _extract_files_from_form(form: FileForm):
 
 
 def _extract_files_from_request():
-    """
-    Извлекает файлы непосредственно из request.files.
-
-    Используется как fallback если файлы не найдены в форме.
-    """
+    """Извлекает файлы напрямую из request.files (fallback)."""
     return (
         request.files.getlist("files")
         or request.files.getlist("file")
@@ -188,30 +173,16 @@ def _extract_files_from_request():
     )
 
 
-def _warm_downloads_best_effort(token: str, items) -> None:
-    """
-    Предварительно получает ссылки для скачивания файлов.
-
-    Выполняется в фоновом режиме, ошибки игнорируются.
-    """
-    async def _runner():
-        await asyncio.gather(
-            *(get_download_url(token, it.disk_path) for it in items),
-            return_exceptions=True,
-        )
-
-    try:
-        asyncio.run(_runner())
-    except Exception:
-        pass
-
-
-def _create_short_links(items):
-    """Создает короткие ссылки для загруженных файлов."""
+def _create_short_links(items, token: str):
+    """Создает короткие ссылки для загруженных на Яндекс.Диск файлов."""
     results = []
     for it in items:
         short = get_unique_short_id()
         db.session.add(URLMap(original=it.disk_path, short=short))
+        try:
+            asyncio.run(yc.get_download_url(token, it.disk_path))
+        except Exception:
+            pass
         results.append(
             {
                 "filename": it.filename,
@@ -228,24 +199,16 @@ def _create_short_links(items):
 
 @app.route("/files", methods=["GET", "POST"])
 def files_view():
-    """
-    Страница загрузки файлов на Яндекс.Диск.
-
-    Обрабатывает загрузку файлов и создание коротких ссылок для скачивания.
-    """
+    """Страница загрузки файлов на Яндекс.Диск и генерации коротких ссылок."""
     form = FileForm()
-
     if not form.validate_on_submit():
         return _render_files_page(form)
-
     token = current_app.config.get("DISK_TOKEN") or ""
     if not token:
         return _flash_and_render(
             form, "Токен Яндекс.Диска не настроен", "danger"
         )
-
     base_dir = current_app.config.get("DISK_BASE_DIR") or "app:"
-
     files = _extract_files_from_form(form) or _extract_files_from_request()
     if not files:
         return _flash_and_render(
@@ -254,13 +217,11 @@ def files_view():
             "multipart/form-data.",
             "warning",
         )
-
     try:
-        items = asyncio.run(upload_many(files, token, base_dir=base_dir))
-    except YandexDiskError as e:
+        items = asyncio.run(yc.upload_many(files, token, base_dir=base_dir))
+    except yc.YandexDiskError as error:
         return _flash_and_render(
-            form, f"Не удалось загрузить файлы: {e}", "danger"
+            form, f"Не удалось загрузить файлы: {error}", "danger"
         )
-    _warm_downloads_best_effort(token, items)
-    results = _create_short_links(items)
+    results = _create_short_links(items, token)
     return _render_files_page(form, results)
