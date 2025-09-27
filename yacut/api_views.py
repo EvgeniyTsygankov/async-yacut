@@ -8,6 +8,7 @@ from .constants import RESERVED_SHORTS
 from .models import URLMap
 from .views import get_unique_short_id
 
+
 # Регулярное выражение для проверки формата короткой ссылки
 # Допускаются буквы (A-Z, a-z) и цифры (0-9) длиной от 1 до 16 символов
 SHORT_RE = re.compile(r'^[A-Za-z0-9]{1,16}$')
