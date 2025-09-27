@@ -173,8 +173,9 @@ def _extract_files_from_request():
 
 
 def _create_short_links(items, token: str):
-    """Создает короткие ссылки для загруженных на Яндекс.Диск файлов."""
+    """Создаёт абсолютные ссылки вида http://localhost/<short>."""
     results = []
+    base = request.host_url.rstrip('/')
     for it in items:
         short = get_unique_short_id()
         db.session.add(URLMap(original=it.disk_path, short=short))
@@ -182,9 +183,10 @@ def _create_short_links(items, token: str):
             asyncio.run(yc.get_download_url(token, it.disk_path))
         except Exception:
             pass
+
         results.append({
-            "filename": it.filename,
-            "short": short,
+            'filename': it.filename,
+            'short_link': f'{base}/{short}',
         })
     db.session.commit()
     return results
