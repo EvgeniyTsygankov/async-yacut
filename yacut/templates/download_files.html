@@ -28,8 +28,9 @@
                   <tr>
                     <td>{{ item.filename }}</td>
                     <td>
-                      {% set link = (item.short_link if item.short_link is defined else (request.host_url ~ item.short)) %}
-                      <a href="{{ link }}" target="_blank" rel="noopener">{{ link }}</a>
+                      <td> {% set link = url_for('follow_short', short_id=item.short, _external=True) %}
+                        <a href="{{ link }}" target="_blank" rel="noopener">{{ link }}</a>
+                      </td>
                     </td>
                   </tr>
                 {% endfor %}
