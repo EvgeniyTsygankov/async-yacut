@@ -28,7 +28,7 @@
                   <tr>
                     <td>{{ item.filename }}</td>
                     <td>
-                      {% set link = url_for('follow_short', short_id=item.short, _external=True) %}
+                      {% set link = request.host_url ~ item.short %}
                       <a href="{{ link }}" target="_blank" rel="noopener">{{ link }}</a>
                     </td>
                   </tr>
