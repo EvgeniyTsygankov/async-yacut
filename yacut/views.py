@@ -174,7 +174,7 @@ def _extract_files_from_request():
 
 
 def _create_short_links(items, token: str):
-    """Создаёт абсолютные ссылки вида http://localhost/<short>."""
+    """Создаёт короткие ссылки для переданных элементов и сохраняет их в БД."""
     results = []
     for it in items:
         short = get_unique_short_id()
@@ -183,6 +183,7 @@ def _create_short_links(items, token: str):
             asyncio.run(yc.get_download_url(token, it.disk_path))
         except Exception:
             pass
+
         results.append({
             'filename': it.filename,
             'short': short,
