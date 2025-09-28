@@ -67,11 +67,7 @@ def index_view():
 
 
 def _filename_from_disk_path(path: str) -> str:
-    """
-    Извлекает оригинальное имя файла из пути Яндекс.Диска.
-
-    Ожидает путь в формате 'app:/.../<uuid>_original_name.ext'
-    """
+    """Извлекает оригинальное имя файла из пути Яндекс.Диска."""
     name = path.rsplit("/", 1)[-1]
     return name.split("_", 1)[1] if "_" in name else name
 
