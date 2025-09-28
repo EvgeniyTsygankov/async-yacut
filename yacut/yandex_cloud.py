@@ -119,7 +119,20 @@ async def upload_file(
     """Загрузить один файл и вернуть UploadItem с путём на диске."""
     path = compose_path(base_dir, file.filename)
     href = await _get_upload_href(session, token, path, overwrite=True)
-    async with session.put(href, data=file.stream) as put_resp:
+    stream = getattr(file, "stream", None) or file
+    try:
+        stream.seek(0)
+    except Exception:
+        pass
+    data = stream.read()
+    headers = {
+        "Content-Type": "application/octet-stream",
+        "Authorization": f"OAuth {token}",
+    }
+    if isinstance(data, (bytes, bytearray)):
+        headers["Content-Length"] = str(len(data))
+
+    async with session.put(href, data=data, headers=headers) as put_resp:
         if put_resp.status not in (201, 202):
             try:
                 detail = await put_resp.json()
