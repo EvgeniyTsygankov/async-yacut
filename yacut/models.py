@@ -19,9 +19,6 @@ from .error_handlers import ModelValidationError
 ALPHABET = string.ascii_letters + string.digits
 
 
-
-
-
 class URLMap(db.Model):
     """
     Модель для представления коротких ссылок в базе данных.
@@ -117,12 +114,10 @@ class URLMap(db.Model):
             db.session.rollback()
             return False
 
-    
     @staticmethod
     def _random_short(length: int, alphabet: str = ALPHABET) -> str:
         """Генерирует случайную строку заданной длины из символов алфавита."""
         return "".join(choice(ALPHABET) for _ in range(length))
-
 
     @classmethod
     def generate_unique_short(
