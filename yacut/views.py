@@ -1,6 +1,4 @@
 import asyncio
-from secrets import choice
-import string
 
 from flask import (
     Response,
@@ -17,27 +15,8 @@ import requests
 
 from . import app, db
 from . import yandex_cloud as yc
-from .constants import LENGTH_SHORT, MAX_TRIES
 from .forms import FileForm, URLMapForm
 from .models import URLMap
-
-
-# Алфавит для генерации коротких ссылок (латинские буквы + цифры)
-ALPHABET = string.ascii_letters + string.digits
-
-
-def _random_short(length: int) -> str:
-    """Генерирует случайную строку заданной длины из символов алфавита."""
-    return "".join(choice(ALPHABET) for _ in range(length))
-
-
-def get_unique_short_id(length: int = LENGTH_SHORT) -> str:
-    """Генерирует уникальный короткий идентификатор для ссылки."""
-    for _ in range(MAX_TRIES):
-        code = _random_short(length)
-        if not URLMap.query.filter_by(short=code).first():
-            return code
-    raise RuntimeError("Не удалось сгенерировать уникальный short_id")
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -54,7 +33,7 @@ def index_view():
     if form.validate_on_submit():
         original = form.original_link.data
         custom = form.custom_id.data or None
-        short = custom if custom else get_unique_short_id()
+        short = custom if custom else URLMap.generate_unique_short()
         db.session.add(URLMap(original=original, short=short))
         db.session.commit()
         short_link = request.host_url + short
@@ -173,7 +152,7 @@ def _create_short_links(items, token: str):
     """Создаёт короткие ссылки для переданных элементов и сохраняет их в БД."""
     results = []
     for it in items:
-        short = get_unique_short_id()
+        short = URLMap.generate_unique_short()
         db.session.add(URLMap(original=it.disk_path, short=short))
         try:
             asyncio.run(yc.get_download_url(token, it.disk_path))

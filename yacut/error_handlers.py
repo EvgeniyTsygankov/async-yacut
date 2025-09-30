@@ -53,3 +53,13 @@ def internal_error(e):
     Возвращает кастомную HTML-страницу для ошибки 500.
     """
     return render_template('500.html'), 500
+
+
+class ModelValidationError(InvalidAPIUsageError):
+    """Кастомное исключение для ошибок валидации модели URLMap."""
+
+    def __init__(self, message: str, status_code: int = 400):
+        """Инициализирует исключение с сообщением и статус-кодом."""
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
