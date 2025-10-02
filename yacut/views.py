@@ -15,6 +15,8 @@ import requests
 
 from . import app, db
 from . import yandex_cloud as yc
+from .constants import RESERVED_SHORTS
+from .error_handlers import ModelValidationError
 from .forms import FileForm, URLMapForm
 from .models import URLMap
 
@@ -23,20 +25,31 @@ from .models import URLMap
 def index_view():
     """
     Главная страница: создание коротких ссылок для URL.
-
-    Обрабатывает форму с оригинальной ссылкой и опциональным кастомным ID.
-    При успешной валидации создает запись в базе данных и показывает короткую
-    ссылку.
     """
     form = URLMapForm()
     short_link = None
+
     if form.validate_on_submit():
         original = form.original_link.data
-        custom = form.custom_id.data or None
-        short = custom if custom else URLMap.generate_unique_short()
-        db.session.add(URLMap(original=original, short=short))
-        db.session.commit()
-        short_link = request.host_url + short
+        custom = (form.custom_id.data or "").strip()
+        try:
+            url_map = (
+                URLMap()
+                .from_dict({"original": original, "short": custom})
+                .save(
+                    generate_short=URLMap.generate_unique_short,
+                    reserved_shorts=RESERVED_SHORTS,
+                )
+            )
+        except ModelValidationError as e:
+            flash(e.message, "danger")
+            return render_template(
+                "converting_links.html",
+                form=form,
+                short_link=None,
+                active_page="index",
+            )
+        short_link = request.host_url + url_map.short
     return render_template(
         "converting_links.html",
         form=form,

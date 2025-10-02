@@ -13,7 +13,8 @@ from wtforms.validators import (
 from .constants import (
     ALLOWED_EXTS,
     RESERVED_SHORTS,
-    SHORT_AUTO_GENERATE_LENGTH
+    SHORT_AUTO_GENERATE_LENGTH,
+    SHORT_RE
 )
 
 
@@ -35,7 +36,7 @@ class URLMapForm(FlaskForm):
                 max=SHORT_AUTO_GENERATE_LENGTH,
                 message='Не более 6 символов'
             ),
-            Regexp(r'^[A-Za-z0-9]+$', message='Только латинские буквы и цифры')
+            Regexp(SHORT_RE, message='Только латинские буквы и цифры')
         ]
     )
     submit = SubmitField('Создать')
@@ -53,7 +54,7 @@ class URLMapForm(FlaskForm):
                 'Предложенный вариант короткой ссылки уже существует.'
             )
         from yacut.models import URLMap
-        if URLMap.query.filter_by(short=data).first():
+        if URLMap.get(data):
             raise ValidationError(
                 'Предложенный вариант короткой ссылки уже существует.'
             )

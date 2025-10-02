@@ -53,26 +53,18 @@ class URLMap(db.Model):
 
     def from_dict(self, data):
         """Заполняет поля объекта из словаря."""
-        if "original" in data:
-            self.original = data["original"]
-        if "short" in data:
-            self.short = data["short"]
+        original = data.get("original")
+        if original is not None:
+            self.original = original
+        short = data.get("short")
+        if short is not None:
+            self.short = short
         return self
 
     @classmethod
-    def get(cls, short: str) -> "URLMap":
-        """
-        Возвращает объект по короткому коду.
-
-        Если не найден — бросает ModelValidationError(404).
-        """
-        obj = cls.query.filter_by(short=short).first()
-        if obj is None:
-            raise ModelValidationError(
-                "Указанный id не найден",
-                status_code=404
-            )
-        return obj
+    def get(cls, short: str) -> Optional["URLMap"]:
+        """Возвращает объект по короткому коду или None, если не найден."""
+        return cls.query.filter_by(short=short).first()
 
     @staticmethod
     def _normalize_short(value: Optional[str]) -> str:
@@ -80,23 +72,20 @@ class URLMap(db.Model):
         return (value or "").strip()
 
     @staticmethod
-    def _raise_short_exists() -> None:
-        """Выбрасывает исключение о существующей короткой ссылке."""
-        raise ModelValidationError(URLMap.SHORT_EXISTS_MSG)
-
-    @staticmethod
     def _validate_short(
         short: str, reserved_set: set, short_re=SHORT_RE
     ) -> None:
         """
-        Валидирует короткую ссылку на соответствие формату.
+        Проверяет валидность короткой ссылки.
 
-        А также резервированным значениям.
+        Выполняет две проверки:
+        1. Соответствие формату регулярному выражению (латинские буквы и цифры)
+        2. Отсутствие в списке зарезервированных коротких ссылок
         """
         if not short_re.fullmatch(short):
             raise ModelValidationError(URLMap.INVALID_SHORT_MSG)
         if short.lower() in reserved_set:
-            URLMap._raise_short_exists()
+            raise ModelValidationError(URLMap.SHORT_EXISTS_MSG)
 
     @staticmethod
     def _is_taken(short: str, exclude_id: Optional[int] = None) -> bool:
@@ -159,23 +148,23 @@ class URLMap(db.Model):
         attempts: int = MAX_TRIES,
     ) -> "URLMap":
         """
-        Сохраняет объект URLMap в БД с валидацией и обработкой коротких ссылок.
+        Обрабатывает два сценария.
 
-        1) Если короткая ссылка указана явно — валидирует формат и
-           уникальность, сохраняет, при конфликте отдаёт SHORT_EXISTS_MSG.
-        2) Если короткая ссылка не указана — генерирует код и пытается
-           закоммитить (повторы attempts раз при коллизиях).
+        1. Если указана кастомная короткая ссылка - проверяет её валидность
+           и уникальность, затем сохраняет
+        2. Если короткая ссылка не указана - генерирует уникальную случайную
+           ссылку и сохраняет с повторами при коллизиях
         """
         reserved_set = set(reserved_shorts or [])
         short = URLMap._normalize_short(self.short)
         if short:
             URLMap._validate_short(short, reserved_set, short_re)
             if URLMap._is_taken(short, exclude_id=self.id):
-                URLMap._raise_short_exists()
+                raise ModelValidationError(URLMap.SHORT_EXISTS_MSG)
             self.short = short
             db.session.add(self)
             if not URLMap._try_commit():
-                URLMap._raise_short_exists()
+                raise ModelValidationError(URLMap.SHORT_EXISTS_MSG)
             return self
         if generate_short is None:
             raise ModelValidationError(

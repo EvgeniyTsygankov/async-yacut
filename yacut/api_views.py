@@ -51,7 +51,7 @@ def get_short_url(short_id):
 
     Возвращает оригинальный URL если короткая ссылка найдена.
     """
-    obj = URLMap.query.filter_by(short=short_id).first()
-    if not obj:
+    obj = URLMap.get(short_id)
+    if obj is None:
         return jsonify(message='Указанный id не найден'), 404
     return jsonify(url=obj.original), 200
