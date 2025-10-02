@@ -23,9 +23,7 @@ from .models import URLMap
 
 @app.route("/", methods=["GET", "POST"])
 def index_view():
-    """
-    Главная страница: создание коротких ссылок для URL.
-    """
+    """Главная страница: создание коротких ссылок для URL."""
     form = URLMapForm()
     short_link = None
 
