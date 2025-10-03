@@ -16,6 +16,7 @@ from .constants import (
     SHORT_AUTO_GENERATE_LENGTH,
     SHORT_RE
 )
+from .models import URLMap
 
 
 class URLMapForm(FlaskForm):
@@ -53,7 +54,6 @@ class URLMapForm(FlaskForm):
             raise ValidationError(
                 'Предложенный вариант короткой ссылки уже существует.'
             )
-        from yacut.models import URLMap
         if URLMap.get(data):
             raise ValidationError(
                 'Предложенный вариант короткой ссылки уже существует.'

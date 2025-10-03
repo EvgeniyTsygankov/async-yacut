@@ -53,12 +53,8 @@ class URLMap(db.Model):
 
     def from_dict(self, data):
         """Заполняет поля объекта из словаря."""
-        original = data.get("original")
-        if original is not None:
-            self.original = original
-        short = data.get("short")
-        if short is not None:
-            self.short = short
+        self.original = data.get("original", self.original)
+        self.short = data.get("short", self.short)
         return self
 
     @classmethod

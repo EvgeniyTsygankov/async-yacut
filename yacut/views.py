@@ -26,7 +26,6 @@ def index_view():
     """Главная страница: создание коротких ссылок для URL."""
     form = URLMapForm()
     short_link = None
-
     if form.validate_on_submit():
         original = form.original_link.data
         custom = (form.custom_id.data or "").strip()
@@ -39,15 +38,9 @@ def index_view():
                     reserved_shorts=RESERVED_SHORTS,
                 )
             )
+            short_link = request.host_url + url_map.short
         except ModelValidationError as e:
             flash(e.message, "danger")
-            return render_template(
-                "converting_links.html",
-                form=form,
-                short_link=None,
-                active_page="index",
-            )
-        short_link = request.host_url + url_map.short
     return render_template(
         "converting_links.html",
         form=form,
